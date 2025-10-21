@@ -1,0 +1,316 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ahorcado - Marcas de Autos</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            background: #f4f4f9;
+            margin: 0;
+            padding: 20px;
+            transition: background 0.3s, color 0.3s;
+        }
+        body.dark {
+            background: #1e1e1e;
+            color: #ffffff;
+        }
+        h1 { color: inherit; }
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .word {
+            font-size: 2em;
+            letter-spacing: 10px;
+            margin: 20px;
+            word-break: break-all;
+        }
+        .stats {
+            font-size: 1.1em;
+            margin: 15px;
+        }
+        .letters {
+            margin-top: 20px;
+        }
+        button.letter {
+            padding: 10px 12px;
+            margin: 5px;
+            border: none;
+            background: #007bff;
+            color: white;
+            cursor: pointer;
+            border-radius: 5px;
+            font-size: 1em;
+            transition: transform 0.12s, opacity 0.12s;
+            min-width: 44px;
+        }
+        button.letter:hover {
+            transform: translateY(-3px);
+        }
+        button.letter:disabled {
+            background: gray;
+            cursor: not-allowed;
+            opacity: 0.6;
+        }
+        .control-btn {
+            padding: 10px 15px;
+            margin: 5px;
+            border: none;
+            background: #28a745;
+            color: white;
+            cursor: pointer;
+            border-radius: 5px;
+            font-size: 1em;
+        }
+        .control-btn.secondary {
+            background: #6c757d;
+        }
+        .pista {
+            font-style: italic;
+            margin: 10px;
+            color: inherit;
+        }
+        img.ahorcado {
+            width: 260px;
+            height: auto;
+            margin: 10px auto;
+            display: block;
+        }
+        .win {
+            animation: winAnim 1s;
+            background: rgba(0, 255, 0, 0.08);
+        }
+        .lose {
+            animation: loseAnim 0.8s;
+            background: rgba(255, 0, 0, 0.06);
+        }
+        @keyframes winAnim {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.04); }
+            100% { transform: scale(1); }
+        }
+        @keyframes loseAnim {
+            0% { transform: translateX(0); }
+            25% { transform: translateX(-10px); }
+            50% { transform: translateX(10px); }
+            75% { transform: translateX(-10px); }
+            100% { transform: translateX(0); }
+        }
+        .dark button.letter {
+            background: #444;
+        }
+        footer {
+            margin-top: 30px;
+            font-size: 0.9em;
+            color: #666;
+        }
+        .topbar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 10px;
+            flex-wrap: wrap;
+            margin-bottom: 10px;
+        }
+        .left {
+            text-align: left;
+        }
+        .right {
+            text-align: right;
+        }
+        @media (max-width: 600px) {
+            .word { font-size: 1.4em; letter-spacing: 6px; }
+            img.ahorcado { width: 200px; }
+            button.letter { min-width: 38px; padding: 8px 10px; margin: 4px; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="topbar">
+            <div class="left">
+                <h1>🎮 Ahorcado - Marcas de Autos 🚗</h1>
+            </div>
+            <div class="right">
+                <button class="control-btn secondary" onclick="toggleDarkMode()" id="darkToggle">🌙 Modo oscuro</button>
+                <button class="control-btn" onclick="nuevaPartida()">🔁 Nueva partida</button>
+            </div>
+        </div>
+
+        <div class="stats">
+            ✅ Victorias: <span id="victorias">0</span> |
+            ❌ Derrotas: <span id="derrotas">0</span>
+        </div>
+        <p class="pista" id="pista"></p>
+        <img class="ahorcado" id="imagenAhorcado" src="" alt="Ahorcado">
+        <div class="word" id="palabra"></div>
+        <div id="intentosRestantes">Intentos restantes: 6</div>
+        <div class="letters" id="letras" aria-label="Teclado de letras"></div>
+
+        <footer>
+            Tip: usa el botón "Nueva partida" o recarga la página para reiniciar la palabra pero mantener el marcador.
+        </footer>
+    </div>
+
+    <script>
+        // Imágenes del ahorcado (cartoon) - alojadas en imgur (CDN). Si en algún momento se caen podés reemplazarlas por otras URLs.
+        const imagenes = [
+            "https://i.imgur.com/0KjAjQG.png", // 6 intentos restantes
+            "https://i.imgur.com/48P7iJZ.png", // 5
+            "https://i.imgur.com/GYUbmzd.png", // 4
+            "https://i.imgur.com/ItpLQxK.png", // 3
+            "https://i.imgur.com/F4nTdcW.png", // 2
+            "https://i.imgur.com/kzuyrK3.png", // 1
+            "https://i.imgur.com/BZ4lRu6.png"  // 0
+        ];
+
+        const marcas = {
+            "TOYOTA": "Japón",
+            "FORD": "Estados Unidos",
+            "CHEVROLET": "Estados Unidos",
+            "HONDA": "Japón",
+            "BMW": "Alemania",
+            "AUDI": "Alemania",
+            "MERCEDES": "Alemania",
+            "KIA": "Corea del Sur",
+            "NISSAN": "Japón",
+            "VOLKSWAGEN": "Alemania"
+        };
+
+        let palabra = "";
+        let pista = "";
+        let intentos = 6;
+        let display = [];
+        let victorias = 0;
+        let derrotas = 0;
+
+        // Inicializa una nueva partida
+        function nuevaPartida() {
+            // Remueve clases de resultado visual
+            document.body.classList.remove("win", "lose");
+
+            // Elegir palabra y pista al azar
+            const keys = Object.keys(marcas);
+            palabra = keys[Math.floor(Math.random() * keys.length)];
+            pista = marcas[palabra];
+
+            // Reset de variables
+            intentos = 6;
+            display = Array.from({length: palabra.length}, () => "_");
+
+            // Actualizar UI
+            document.getElementById("palabra").textContent = display.join(" ");
+            document.getElementById("pista").textContent = "🧠 Pista: Marca de " + pista;
+            document.getElementById("intentosRestantes").textContent = "Intentos restantes: " + intentos;
+            document.getElementById("imagenAhorcado").src = imagenes[0];
+
+            generarBotones();
+        }
+
+        // Genera botones A-Z
+        function generarBotones() {
+            const contenedor = document.getElementById("letras");
+            contenedor.innerHTML = "";
+            const letras = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+            for (let i = 0; i < letras.length; i++) {
+                const letra = letras[i];
+                const btn = document.createElement("button");
+                btn.className = "letter";
+                btn.textContent = letra;
+                btn.setAttribute("aria-label", "Letra " + letra);
+                btn.onclick = () => intentarLetra(letra, btn);
+                contenedor.appendChild(btn);
+            }
+        }
+
+        // Intento de letra
+        function intentarLetra(letra, boton) {
+            if (!boton || boton.disabled) return;
+            boton.disabled = true;
+
+            if (palabra.includes(letra)) {
+                for (let i = 0; i < palabra.length; i++) {
+                    if (palabra[i] === letra) display[i] = letra;
+                }
+                document.getElementById("palabra").textContent = display.join(" ");
+
+                if (!display.includes("_")) {
+                    // Ganó
+                    victorias++;
+                    finalizarPartida(true);
+                }
+            } else {
+                intentos--;
+                document.getElementById("intentosRestantes").textContent = "Intentos restantes: " + intentos;
+                // Actualiza imagen acorde a los intentos restantes
+                // imagen index: 0 => 6 intentos, 6 => 0 intentos
+                const idx = 6 - intentos;
+                const imgIndex = Math.min(Math.max(idx, 0), imagenes.length - 1);
+                document.getElementById("imagenAhorcado").src = imagenes[imgIndex];
+
+                if (intentos === 0) {
+                    derrotas++;
+                    finalizarPartida(false);
+                }
+            }
+        }
+
+        // Finalizar partida: win = boolean
+        function finalizarPartida(win) {
+            // Deshabilitar todas las letras
+            document.querySelectorAll("#letras button").forEach(b => b.disabled = true);
+
+            // Mostrar resultado y animación
+            if (win) {
+                document.body.classList.add("win");
+                // Mostrar palabra completa por si había espacios o símbolos
+                document.getElementById("palabra").textContent = palabra;
+                setTimeout(() => {
+                    alert("🎉 ¡Ganaste! La marca era: " + palabra);
+                }, 100);
+            } else {
+                document.body.classList.add("lose");
+                document.getElementById("palabra").textContent = palabra;
+                setTimeout(() => {
+                    alert("💀 Perdiste. La marca era: " + palabra);
+                }, 100);
+            }
+
+            // Actualizar marcador en UI
+            document.getElementById("victorias").textContent = victorias;
+            document.getElementById("derrotas").textContent = derrotas;
+        }
+
+        // Alternar modo oscuro
+        function toggleDarkMode() {
+            document.body.classList.toggle("dark");
+            // Cambia texto del boton
+            const btn = document.getElementById("darkToggle");
+            if (document.body.classList.contains("dark")) btn.textContent = "☀️ Modo claro";
+            else btn.textContent = "🌙 Modo oscuro";
+        }
+
+        // Iniciar la primera partida al cargar
+        nuevaPartida();
+
+        // Soporte para jugar con teclado físico (opcional)
+        document.addEventListener("keydown", (e) => {
+            const key = e.key.toUpperCase();
+            if (/^[A-Z]$/.test(key)) {
+                // Buscar botón correspondiente
+                const buttons = document.querySelectorAll("#letras button");
+                for (let b of buttons) {
+                    if (b.textContent === key && !b.disabled) {
+                        b.click();
+                        break;
+                    }
+                }
+            }
+        });
+    </script>
+</body>
+</html>
